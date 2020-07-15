@@ -11,14 +11,8 @@ http.listen(3000, () => {
 });
 
 io.on("connection", (socket) => {
-  io.emit("connections", Object.keys(io.sockets.connected).length);
-
   socket.on("disconnect", () => {
     console.log("disconnect");
-  });
-
-  socket.on("Create", (data) => {
-    socket.broadcast.emit("Create", data);
   });
 
   socket.on("chat-message", (data) => {
@@ -26,10 +20,17 @@ io.on("connection", (socket) => {
   });
 
   socket.on("typing", (data) => {
-    socket.broadcast.emit("typing", data);
+    console.log(data);
+    // socket.broadcast.emit("typing", data);
   });
 
   socket.on("stopTyping", (data) => {
     socket.broadcast.emit("stopTyping", data);
+  });
+
+  socket.on("joined", (data) => {
+    io.emit("connections", 1);
+    io.emit("joined", data);
+    console.log(data);
   });
 });

@@ -15,64 +15,91 @@
 
   <body>
     <div id="app">
-      <div class="container">
-        <div class="col-lg-6 offset-lg-3">
-          <div v-if="ready">
-            <p v-for="user in info">
-              {{user.username}} {{user.type}}
-            </p>
-          </div>
+      <div v-if="ready">
+        <p v-for="user in info">
+          {{user.username}} {{user.type}}
+        </p>
+      </div>
 
-          <div v-if="!ready">
-            <h4>Enter your username</h4>
-            <form @submit.prevent="addUser">
-              <div class="form-group row">
-                <input
-                  type="text"
-                  class="form-control col-9"
-                  v-model="username"
-                  placeholder="Enter username here"
-                />
-                <input
-                  type="submit"
-                  value="Join"
-                  class="btn btn-sm btn-info ml-1"
-                />
-              </div>
-            </form>
+      <div v-if="!ready">
+        <h4>Enter your username</h4>
+        <form @submit.prevent="addUser">
+          <div class="form-group row">
+            <input
+              type="text"
+              class="form-control col-9"
+              v-model="username"
+              placeholder="Enter username here"
+              required
+            />
+            <input
+              type="submit"
+              value="Join"
+              class="btn btn-sm btn-info ml-1"
+            />
           </div>
-          <h2 v-else>{{username}}</h2>
-          <div class="card bg-info" v-if="ready">
-            <div class="card-header text-white">
-              <h4>
-                My Chat App
-                <span class="float-right">{{connections}} connections</span>
-              </h4>
-            </div>
-            <ul class="list-group list-group-flush text-right">
-              <small v-if="typing" class="text-white"
-                >{{typing}} is typing</small
+        </form>
+      </div>
+      <div v-else class="container">
+        <div class="row">
+          <div class="col-sm-8">
+            <div v-for="item in users">
+              <div
+                class="card"
+                v-bind:style="{backgroundColor: item.color}"
+                v-if="ready"
               >
-              <li class="list-group-item" v-for="message in messages">
-                <span :class="{'float-left':message.type === 1}">
+                <div class="card-header text-white">
+                  <h4>
+                    My Chat App - {{item.name}}
+                    <span class="float-right">{{connections}} connections</span>
+                  </h4>
+                </div>
+                <!-- <ul class="list-group list-group-flush text-right">
+                  <small v-if="typing" class="text-white"
+                    >{{typing}} is typing</small
+                  >
+                  <li class="list-group-item" v-for="message in messages">
+                    <span :class="{'float-left':message.type === 1}">
+                      {{message.message}}
+                      <small>:{{message.user}}</small>
+                    </span>
+                  </li>
+                </ul> -->
+
+                <div class="card-body">
+                  <form @submit.prevent="send">
+                    <div class="form-group">
+                      <input
+                        type="text"
+                        class="form-control"
+                        v-model="item.message"
+                        placeholder="Enter message here"
+                        :disabled="item.id !== id"
+                      />
+                    </div>
+                  </form>
+                </div>
+              </div>
+            </div>
+            <div v-for="message in messages" class="align-middle">
+              <span
+                class="float-left d-flex p-2 box-message"
+                v-bind:style="{backgroundColor: message.color}"
+                v-bind:class="{'text-danger':error}"
+                ><h4>
                   {{message.message}}
-                  <small>:{{message.user}}</small>
-                </span>
+                </h4></span
+              >
+            </div>
+          </div>
+          <div class="col-sm-4">
+            <h5 class="card-title">Danh sách người chơi</h5>
+            <ul class="list-group">
+              <li v-for="user in users" class="list-group-item">
+                {{user.name}}
               </li>
             </ul>
-
-            <div class="card-body">
-              <form @submit.prevent="send">
-                <div class="form-group">
-                  <input
-                    type="text"
-                    class="form-control"
-                    v-model="newMessage"
-                    placeholder="Enter message here"
-                  />
-                </div>
-              </form>
-            </div>
           </div>
         </div>
       </div>
@@ -91,21 +118,25 @@
 
       // Declaring our data object with empty arrays and properties
       data: {
-        newMessage: null,
+        users: [],
         messages: [],
         typing: false,
         username: null,
         ready: false,
         info: [],
         connections: 0,
+        id: new Date().getTime(),
+        error: false,
       },
+
+      props: {},
 
       // Our vue created method
       created() {
-        socket.emit("Create", "HungMe");
-        socket.on("Create", (data) => {
-          console.log(data);
-        });
+        // socket.emit("Create", this.username);
+        // socket.on("Create", (data) => {
+        console.log("Hello to MatchToWord");
+        // });
         // Emitting 'leave' event on tab closed event.
         window.onbeforeunload = () => {
           socket.emit("leave", this.username);
@@ -117,6 +148,7 @@
             message: data.message,
             type: 1,
             user: data.user,
+            color: data.color,
           });
         });
 
@@ -133,8 +165,14 @@
         // Listening to 'joined' event emitted from the server and pushing the data to info array
         socket.on("joined", (data) => {
           this.info.push({
-            username: data,
+            username: data.name,
             type: "joined",
+          });
+
+          this.users.push({
+            id: data.id,
+            name: data.name,
+            color: data.color,
           });
 
           // Setting a time out for the info array to be emptied
@@ -158,17 +196,27 @@
 
         // Listening to 'connections' event emitted from the server to get the total number of connected clients
         socket.on("connections", (data) => {
-          this.connections = data;
+          this.connections += data;
         });
       },
-
-      // Vue Watch hook
       watch: {
-        // Watching for changes in the message inbox box and emitting the either 'typing' or 'stopTyping' event
-        newMessage(value) {
-          value
-            ? socket.emit("typing", this.username)
-            : socket.emit("stopTyping");
+        messages(val) {
+          console.log("change messages", val);
+          if (val.length < 2) {
+            return;
+          }
+          splitText1 = val[val.length - 1].message.split(" ");
+          splitText0 = val[val.length - 2].message.split(" ");
+          if (splitText1.length < 2) {
+            console.log("sai dinh dang");
+            return;
+          }
+          if (splitText0[1].toLowerCase() !== splitText1[0].toLowerCase()) {
+            console.log("False");
+            this.error = true;
+            return;
+          }
+          console.log("True");
         },
       },
 
@@ -177,24 +225,45 @@
         //The send method stores the user message and emit an event to the server.
         send() {
           this.messages.push({
-            message: this.newMessage,
+            message: this.users.find((message) => message.id == this.id)
+              .message,
             type: 0,
-            user: "Me",
+            user: this.users.find((name) => name.id == this.id).name,
+            color: this.users.find((color) => color.id == this.id).color,
           });
 
           socket.emit("chat-message", {
-            message: this.newMessage,
-            user: this.username,
+            message: this.users.find((message) => message.id == this.id)
+              .message,
+            user: this.users.find((name) => name.id == this.id).name,
+            color: this.users.find((color) => color.id == this.id).color,
           });
-          this.newMessage = null;
+          this.users.find((message) => message.id == this.id).message = null;
         },
 
         // The addUser method emit a 'joined' event with the username and set the 'ready' property to true.
         addUser() {
           this.ready = true;
-          socket.emit("joined", this.username);
+          color = "#" + ((Math.random() * 0xffffff) << 0).toString(16);
+          socket.emit("joined", {
+            id: this.id,
+            name: this.username,
+            color: color,
+          });
         },
       },
     });
   </script>
+  <style>
+    .container {
+      margin: 2%;
+    }
+    .box-message {
+      border: 1px solid #ccc;
+      padding: 2px;
+      margin-top: 5%;
+      border-bottom-right-radius: 50%;
+      border-bottom-left-radius: 50%;
+    }
+  </style>
 </html>
