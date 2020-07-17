@@ -18,23 +18,26 @@ io.on("connection", (socket) => {
   });
 
   socket.on("chat-message", (data) => {
-    // socket.broadcast.emit("chat-message", data);
-    console.log(data);
+    io.in(data.room).emit("chat-message", data);
+    console.log("chat-message: ", data);
   });
 
   socket.on("typing", (data) => {
-    console.log(data);
-    // socket.broadcast.emit("typing", data);
-  });
-
-  socket.on("leave", (data) => {
-    console.log(data);
-    rooms[data.room] = rooms[data.room].filter((user) => user.id !== data.id);
-    socket.broadcast.emit("leave", rooms[data.room]);
+    console.log("typing: ", data);
+    io.in(data.room).emit("typing", data);
   });
 
   socket.on("stopTyping", (data) => {
-    socket.broadcast.emit("stopTyping", data);
+    console.log("typing: ", data);
+    io.in(data.room).emit("typing", data);
+  });
+
+  socket.on("leave", (data) => {
+    console.log("leave: ", data);
+    if (rooms[data.room]) {
+      rooms[data.room] = rooms[data.room].filter((user) => user.id !== data.id);
+    }
+    socket.broadcast.emit("leave", rooms[data.room]);
   });
 
   socket.on("create_room", (data) => {

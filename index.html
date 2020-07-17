@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta http-equiv="X-UA-Compatible" content="ie=edge" />
-    <title>ChatApp_Socket</title>
+    <title>MatchToWord</title>
     <link
       href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css"
       rel="stylesheet"
@@ -21,96 +21,81 @@
         </p>
       </div>
       <div v-if="!ready" class="row">
-        <div class="col-8">
-          <h4>Enter your username</h4>
-          <form @submit.prevent="addUser">
-            <div class="form-group row">
-              <input
-                type="text"
-                class="form-control col-9"
-                v-model="username"
-                placeholder="Enter username here"
-                required
-              />
-              <input
-                type="text"
-                class="form-control col-9"
-                v-model="roomJoin"
-                placeholder="Enter room here"
-                required
-              />
-              <input
-                type="submit"
-                value="Join"
-                class="btn btn-sm btn-info ml-1"
-              />
-            </div>
-          </form>
-        </div>
-        <div class="col-4">
-          <form @submit.prevent="createRoom">
-            <div class="form-group row">
-              <input
-                type="text"
-                class="form-control col-9"
-                v-model="roomCreate"
-                placeholder="Enter room here"
-                required
-              />
-              <input
-                type="submit"
-                value="Create"
-                class="btn btn-sm btn-info ml-1"
-              />
-            </div>
-          </form>
+        <div class="container">
+          <div class="col-8">
+            <h4>Enter your username</h4>
+            <form @submit.prevent="addUser">
+              <div class="form-group row">
+                <input
+                  type="text"
+                  class="form-control col-9"
+                  v-model="username"
+                  placeholder="Enter username here"
+                  required
+                />
+                <input
+                  type="text"
+                  class="form-control col-9"
+                  v-model="roomJoin"
+                  placeholder="Enter room here"
+                  required
+                />
+                <input
+                  type="submit"
+                  value="Join"
+                  class="btn btn-sm btn-info ml-1"
+                />
+              </div>
+            </form>
+          </div>
         </div>
       </div>
 
       <div v-else class="container">
         <div class="row">
           <div class="col-sm-8">
-            <div v-for="item in users">
-              <div
-                class="card"
-                v-bind:style="{backgroundColor: item.color}"
-                v-if="ready"
-              >
-                <div class="card-header text-white">
-                  <h4>
-                    My Chat App - {{item.name}}
-                    <span class="float-right">{{connections}} connections</span>
-                  </h4>
-                </div>
-
-                <div class="card-body">
-                  <form @submit.prevent="send">
-                    <div class="form-group">
-                      <input
-                        type="text"
-                        class="form-control"
-                        v-model="item.message"
-                        placeholder="Enter message here"
-                        :disabled="item.id !== id"
-                      />
-                    </div>
-                  </form>
-                </div>
+            <!-- <div v-for="item in users"> -->
+            <div
+              class="card"
+              v-bind:style="{backgroundColor: color}"
+              v-if="ready"
+            >
+              <div class="card-header text-white">
+                <h4>
+                  Player Name: {{username}}
+                  <span class="float-right">{{connections}} connections</span>
+                </h4>
+                <small v-if="checkTyping">{{typing.name}} is typing</small>
+              </div>
+              <div class="card-body">
+                <form @submit.prevent="send">
+                  <div class="form-group">
+                    <input
+                      type="text"
+                      class="form-control"
+                      v-model="newMessage"
+                      placeholder="Enter message here"
+                    />
+                  </div>
+                </form>
               </div>
             </div>
+            <!-- </div> -->
+
             <div v-for="message in messages" class="align-middle">
               <span
                 class="float-left d-flex p-2 box-message"
                 v-bind:style="{backgroundColor: message.color}"
                 v-bind:class="{'text-danger':error}"
-                ><h4>
-                  {{message.message}} +{{message.room}}
+              >
+                <h4>
+                  {{message.message}}
                 </h4></span
               >
             </div>
           </div>
           <div class="col-sm-4">
-            <h5 class="card-title">Danh sách người chơi</h5>
+            <h5 class="card-title">List Player</h5>
             <ul class="list-group">
               <li v-for="user in users" class="list-group-item">
                 {{user.name}}
@@ -135,11 +120,13 @@
       // Declaring our data object with empty arrays and properties
       data: {
         users: [],
+        newMessage: null,
+        color: null,
         messages: [],
-        typing: false,
         username: null,
         roomJoin: null,
-        roomCreate: null,
+        typing: [],
+        checkTyping: false,
         ready: false,
         info: [],
         connections: 0,
@@ -153,13 +140,12 @@
       created() {
         // socket.emit("Create", this.username);
         // socket.on("Create", (data) => {
-        console.log("Hello to MatchToWord");
+        // console.log("Hello to MatchToWord");
         // });
         // Emitting 'leave' event on tab closed event.
         window.onbeforeunload = () => {
-          alert("leve");
           socket.emit("leave", {
-            id: this.users.find((name) => name.id == this.id).name,
+            id: this.id,
             room: this.users.find((room) => room.id == this.id).room,
           });
         };
@@ -173,37 +159,65 @@
             color: data.color,
             room: data.room,
           });
-        });
 
-        // Listening to typing event emitted from the server and setting the data (username) to the UI
-        socket.on("typing", (data) => {
-          this.typing = data;
-        });
-
-        // Listening to stopTyping event emitted from the server and setting the typing property to false
-        socket.on("stopTyping", () => {
-          this.typing = false;
-        });
-
-        socket.on("create_room", (data) => {
-          console.log(data);
+          // console.log("change messages", val);
+          splitText1 = data.message.split(" ");
+          if (splitText1.length < 2) {
+            console.log("sai dinh dang" + data.user);
+            this.error = true;
+            return;
+          }
+          if (this.messages.length < 2) {
+            return;
+          }
+          splitText0 = this.messages[this.messages.length - 2].message.split(
+            " "
+          );
+          if (splitText1.length < 2 || splitText0.length < 2) {
+            console.log("sai dinh dang" + " - " + data.user);
+            this.error = true;
+            return;
+          }
+          if (splitText0[1].toLowerCase() !== splitText1[0].toLowerCase()) {
+            console.log("False" + " - " + data.user);
+            this.error = true;
+            return;
+          }
+          console.log("True");
         });
 
         // Listening to 'joined' event emitted from the server and pushing the data to info array
         socket.on("joined", (data) => {
-          console.log("on Joined html", data);
           this.info = data;
           this.users = data;
-          // console.log(this.users);
-
           // Setting a time out for the info array to be emptied
           setTimeout(() => {
             this.info = [];
-          }, 5000);
+          }, 3000);
+        });
+
+        socket.on("typing", (data) => {
+          this.typing = data;
+          this.checkTyping = data.check;
+        });
+
+        // Listening to stopTyping event emitted from the server and setting the typing property to false
+        socket.on("stopTyping", () => {
+          this.typing = [];
+          this.checkTyping = data.check;
         });
 
         // Listening to 'leave' event emitted from the server and pushing the data to info array
         socket.on("leave", (data) => {
+          this.info.push({
+            username: data,
+            type: "left",
+          });
+
+          // Setting a time out for the info array to be emptied
+          setTimeout(() => {
+            this.info = [];
+          }, 2000);
           this.users = data;
         });
 
@@ -213,23 +227,21 @@
         });
       },
       watch: {
-        messages(val) {
-          console.log("change messages", val);
-          if (val.length < 2) {
-            return;
-          }
-          splitText1 = val[val.length - 1].message.split(" ");
-          splitText0 = val[val.length - 2].message.split(" ");
-          if (splitText1.length < 2) {
-            console.log("sai dinh dang");
-            return;
-          }
-          if (splitText0[1].toLowerCase() !== splitText1[0].toLowerCase()) {
-            console.log("False");
-            this.error = true;
-            return;
-          }
-          console.log("True");
+        newMessage(value) {
+          // console.log(value);
+          value
+            ? socket.emit("typing", {
+                name: this.username,
+                message: this.newMessage,
+                room: this.roomJoin,
+                check: true,
+              })
+            : socket.emit("stopTyping", {
+                name: this.username,
+                message: this.newMessage,
+                room: this.roomJoin,
+                check: false,
+              });
         },
       },
 
@@ -237,48 +249,26 @@
       methods: {
         //The send method stores the user message and emit an event to the server.
         send() {
-          this.messages.push({
-            message: this.users.find((message) => message.id == this.id)
-              .message,
-            type: 0,
-            user: this.users.find((name) => name.id == this.id).name,
-            color: this.users.find((color) => color.id == this.id).color,
-            // room: this.rooms.find((room) => room.id == this.id).room,
-          });
-
           socket.emit("chat-message", {
-            message: this.users.find((message) => message.id == this.id)
-              .message,
+            message: this.newMessage,
             user: this.users.find((name) => name.id == this.id).name,
             color: this.users.find((color) => color.id == this.id).color,
-            // room: this.rooms.find((room) => room.id == this.id).room,
+            room: this.users.find((room) => room.id == this.id).room,
           });
-          this.users.find((message) => message.id == this.id).message = null;
+          this.newMessage = null;
         },
 
         // The addUser method emit a 'joined' event with the username and set the 'ready' property to true.
         addUser() {
           this.ready = true;
-          color = "#" + ((Math.random() * 0xffffff) << 0).toString(16);
+          this.color = "#" + ((Math.random() * 0xffffff) << 0).toString(16);
           socket.emit("joined", {
             id: this.id,
             name: this.username,
-            color: color,
+            color: this.color,
             room: this.roomJoin,
           });
-          console.log("index.html: addUser");
-        },
-        createRoom() {
-          socket.emit("create_room", {
-            roomCreate: this.roomCreate,
-          });
-          // socket.emit("joined", {
-          //   id: this.id,
-          //   name: this.username,
-          //   color: color,
-          //   room: this.roomCreate,
-          // });
-          console.log("index.html: createRoom");
+          // console.log("index.html: addUser");
         },
       },
     });
