@@ -155,7 +155,7 @@
           this.messages.push({
             message: data.message,
             type: 1,
-            user: data.user,
+            name: data.name,
             color: data.color,
             room: data.room,
           });
@@ -163,8 +163,9 @@
           // console.log("change messages", val);
           splitText1 = data.message.split(" ");
           if (splitText1.length < 2) {
-            console.log("sai dinh dang" + data.user);
+            console.log("sai dinh dang " + " - " + data.name);
             this.error = true;
+            socket.emit("errors-message", { name: data.name });
             return;
           }
           if (this.messages.length < 2) {
@@ -174,13 +175,15 @@
             " "
           );
           if (splitText1.length < 2 || splitText0.length < 2) {
-            console.log("sai dinh dang" + " - " + data.user);
+            console.log("sai dinh dang " + " - " + data.name);
             this.error = true;
+            socket.emit("errors-message", { name: data.name });
             return;
           }
           if (splitText0[1].toLowerCase() !== splitText1[0].toLowerCase()) {
-            console.log("False" + " - " + data.user);
+            console.log("False" + " - " + data.name);
             this.error = true;
+            socket.emit("errors-message", { name: data.name });
             return;
           }
           console.log("True");
@@ -251,7 +254,7 @@
         send() {
           socket.emit("chat-message", {
             message: this.newMessage,
-            user: this.users.find((name) => name.id == this.id).name,
+            name: this.users.find((name) => name.id == this.id).name,
             color: this.users.find((color) => color.id == this.id).color,
             room: this.users.find((room) => room.id == this.id).room,
           });

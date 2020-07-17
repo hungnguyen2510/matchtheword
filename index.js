@@ -58,4 +58,8 @@ io.on("connection", (socket) => {
     // io.to(data.room).emit("connections", 1);
     // io.to(data.room).emit("joined", data);
   });
+
+  socket.on("errors-message", (data) => {
+    console.log(data);
+  });
 });
