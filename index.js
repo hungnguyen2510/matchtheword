@@ -53,13 +53,16 @@ io.on("connection", (socket) => {
     rooms[data.room].push(data);
     console.log("joined: ", data);
     socket.join(data.room);
-    // io.emit("connections", 1);
     io.in(data.room).emit("joined", rooms[data.room]);
-    // io.to(data.room).emit("connections", 1);
-    // io.to(data.room).emit("joined", data);
+
+    io.in(data.room).emit(
+      "connections",
+      io.sockets.adapter.rooms[data.room].length
+    );
   });
 
   socket.on("errors-message", (data) => {
     console.log(data);
+    io.in(data.room).emit("errors-message", { color: "red" });
   });
 });

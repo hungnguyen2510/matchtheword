@@ -86,7 +86,6 @@
               <span
                 class="float-left d-flex p-2 box-message"
                 v-bind:style="{backgroundColor: message.color}"
-                v-bind:class="{'text-danger':error}"
               >
                 <h4>
                   {{message.message}}
@@ -131,18 +130,12 @@
         info: [],
         connections: 0,
         id: new Date().getTime(),
-        error: false,
       },
 
       props: {},
 
       // Our vue created method
       created() {
-        // socket.emit("Create", this.username);
-        // socket.on("Create", (data) => {
-        // console.log("Hello to MatchToWord");
-        // });
-        // Emitting 'leave' event on tab closed event.
         window.onbeforeunload = () => {
           socket.emit("leave", {
             id: this.id,
@@ -153,6 +146,7 @@
         // Listening to chat-message event emitted from the server and pushing to messages array
         socket.on("chat-message", (data) => {
           this.messages.push({
+            id: data.id,
             message: data.message,
             type: 1,
             name: data.name,
@@ -164,8 +158,11 @@
           splitText1 = data.message.split(" ");
           if (splitText1.length < 2) {
             console.log("sai dinh dang " + " - " + data.name);
-            this.error = true;
-            socket.emit("errors-message", { name: data.name });
+            socket.emit("errors-message", {
+              id: data.id,
+              name: data.name,
+              room: data.room,
+            });
             return;
           }
           if (this.messages.length < 2) {
@@ -176,14 +173,20 @@
           );
           if (splitText1.length < 2 || splitText0.length < 2) {
             console.log("sai dinh dang " + " - " + data.name);
-            this.error = true;
-            socket.emit("errors-message", { name: data.name });
+            socket.emit("errors-message", {
+              id: data.id,
+              name: data.name,
+              room: data.room,
+            });
             return;
           }
           if (splitText0[1].toLowerCase() !== splitText1[0].toLowerCase()) {
             console.log("False" + " - " + data.name);
-            this.error = true;
-            socket.emit("errors-message", { name: data.name });
+            socket.emit("errors-message", {
+              id: data.id,
+              name: data.name,
+              room: data.room,
+            });
             return;
           }
           console.log("True");
@@ -226,7 +229,15 @@
 
         // Listening to 'connections' event emitted from the server to get the total number of connected clients
         socket.on("connections", (data) => {
-          this.connections += data;
+          this.connections = data;
+        });
+
+        socket.on("errors-message", (data) => {
+          console.log(data);
+          console.log(this.id);
+          var nameErrors = this.messages.find((data) => data.id == this.id)
+            .name;
+          console.log("nameErrors: ", nameErrors);
         });
       },
       watch: {
@@ -253,6 +264,7 @@
         //The send method stores the user message and emit an event to the server.
         send() {
           socket.emit("chat-message", {
+            id: this.id,
             message: this.newMessage,
             name: this.users.find((name) => name.id == this.id).name,
             color: this.users.find((color) => color.id == this.id).color,
